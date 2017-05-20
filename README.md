@@ -7,6 +7,6 @@ You'll never need this, but thanks for visiting.
 
 2-Clause BSD
 
-## Nurtitional value
+## nutritional value
 
 Marginal.
