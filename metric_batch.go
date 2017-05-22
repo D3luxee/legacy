@@ -262,4 +262,229 @@ func (slice IntMetrics) Swap(i, j int) {
 	slice[i], slice[j] = slice[j], slice[i]
 }
 
+// MarshalJSON marshals a struct MetricBatch into the reduced wire
+// format expected by downstream consumers
+func (m *MetricBatch) MarshalJSON() ([]byte, error) {
+	var err error
+	var mBuf []byte
+	var addComma bool
+	var j string
+
+	j = `{"host_id":`
+	j += fmt.Sprintf("%.0f", float64(m.HostID)) + `,`
+	j += `"proto_ver":`
+	j += fmt.Sprintf("%.0f", float64(m.Protocol)) + `,`
+	j += `"data":[`
+
+	for i := range m.Data {
+		if addComma {
+			j += `,`
+		}
+		if mBuf, err = m.Data[i].MarshalJSON(); err != nil {
+			goto fail
+		}
+		j += string(mBuf)
+		addComma = true
+	}
+	j += `]}`
+
+	return []byte(j), nil
+
+fail:
+	return []byte{}, nil
+}
+
+// MarshalJSON ...
+func (m *MetricData) MarshalJSON() ([]byte, error) {
+	var err error
+	var mBuf []byte
+	var hasFloatMetrics, hasStringMetrics bool
+	var j string
+
+	j = `{"ctime":`
+	j += fmt.Sprintf("%.0f", float64(m.Time.Unix())) + `,`
+	j += `{"metrics":{`
+
+	if m.FloatMetrics.Len() > 0 {
+		hasFloatMetrics = true
+		sort.Sort(m.FloatMetrics)
+		if mBuf, err = m.FloatMetrics.MarshalJSON(); err != nil {
+			goto fail
+		}
+		j += string(mBuf)
+	}
+	if hasFloatMetrics && (m.StringMetrics.Len() > 0 || m.IntMetrics.Len() > 0) {
+		j += `,`
+	}
+
+	if m.StringMetrics.Len() > 0 {
+		hasStringMetrics = true
+		sort.Sort(m.StringMetrics)
+		if mBuf, err = m.StringMetrics.MarshalJSON(); err != nil {
+			goto fail
+		}
+		j += string(mBuf)
+	}
+	if hasStringMetrics && m.IntMetrics.Len() > 0 {
+		j += `,`
+	}
+
+	if m.IntMetrics.Len() > 0 {
+		sort.Sort(m.IntMetrics)
+		if mBuf, err = m.IntMetrics.MarshalJSON(); err != nil {
+			goto fail
+		}
+		j += string(mBuf)
+	}
+
+	j += `}`
+	return []byte(j), nil
+
+fail:
+	return []byte{}, err
+}
+
+// MarshalJSON ...
+func (slice FloatMetrics) MarshalJSON() ([]byte, error) {
+	var lastMetric string
+	var j string
+
+	for i := range slice {
+		switch lastMetric {
+		case ``:
+			// first element
+			j = `"` + slice[i].Metric + `":{` +
+				`"` + slice[i].Subtype + `":` +
+				fmt.Sprintf("%.0f", slice[i].Value)
+		case slice[i].Metric:
+			// additional value for this metric
+			j += `,"` + slice[i].Subtype + `":` +
+				fmt.Sprintf("%.0f", slice[i].Value)
+		default:
+			// metric switched
+			lastMetric = slice[i].Metric
+			j += `},` +
+				`"` + slice[i].Metric + `":{` +
+				`"` + slice[i].Subtype + `":` +
+				fmt.Sprintf("%.0f", slice[i].Value)
+		}
+	}
+	if len(slice) > 0 {
+		// close last entry
+		j += `}`
+	}
+
+	return []byte(j), nil
+}
+
+// MarshalJSON ...
+func (slice IntMetrics) MarshalJSON() ([]byte, error) {
+	var lastMetric string
+	var j string
+
+	for i := range slice {
+		switch lastMetric {
+		case ``:
+			// first element
+			j = `"` + slice[i].Metric + `":{` +
+				`"` + slice[i].Subtype + `":` +
+				fmt.Sprintf("%.0f", float64(slice[i].Value))
+		case slice[i].Metric:
+			// additional value for this metric
+			j += `,"` + slice[i].Subtype + `":` +
+				fmt.Sprintf("%.0f", float64(slice[i].Value))
+		default:
+			// metric switched
+			lastMetric = slice[i].Metric
+			j += `},` +
+				`"` + slice[i].Metric + `":{` +
+				`"` + slice[i].Subtype + `":` +
+				fmt.Sprintf("%.0f", float64(slice[i].Value))
+		}
+	}
+	if len(slice) > 0 {
+		// close last entry
+		j += `}`
+	}
+
+	return []byte(j), nil
+}
+
+// MarshalJSON ...
+func (slice StringMetrics) MarshalJSON() ([]byte, error) {
+	var lastMetric string
+	var j string
+	ip4Metrics := []StringMetric{}
+	ip6Metrics := []StringMetric{}
+
+loop:
+	for i := range slice {
+		// intercept special formatted metrics
+		switch slice[i].Metric {
+		case `/sys/net/ipv4_addr`:
+			ip4Metrics = append(ip4Metrics, slice[i])
+			continue loop
+		case `/sys/net/ipv6_addr`:
+			ip6Metrics = append(ip6Metrics, slice[i])
+			continue loop
+		}
+
+		switch lastMetric {
+		case ``:
+			// first element
+			lastMetric = slice[i].Metric
+			j = `"` + slice[i].Metric + `":{` +
+				`"` + slice[i].Subtype + `":` +
+				`"` + slice[i].Value + `"`
+		case slice[i].Metric:
+			// additional value for this metric
+			j += `,"` + slice[i].Subtype + `":` +
+				`"` + slice[i].Value + `"`
+		default:
+			// metric switched
+			lastMetric = slice[i].Metric
+			j += `},` +
+				`"` + slice[i].Metric + `":{` +
+				`"` + slice[i].Subtype + `":` +
+				`"` + slice[i].Value + `"`
+		}
+	}
+	if len(slice) > 0 {
+		// close last entry
+		j += `}`
+	}
+
+	addComma := false
+	if len(ip4Metrics) > 0 {
+		j += `,"/sys/net/ipv4_addr":{` +
+			`"":{` + `"ips":[`
+		for i := range ip4Metrics {
+			if addComma {
+				j += `,`
+			}
+			j += `{"` + ip4Metrics[i].Subtype + `":` +
+				`"` + ip4Metrics[i].Value + `"}`
+			addComma = true
+		}
+		j += `]}}`
+	}
+
+	addComma = false
+	if len(ip6Metrics) > 0 {
+		j += `,"/sys/net/ipv6_addr":{` +
+			`"":{` + `"ips":[`
+		for i := range ip6Metrics {
+			if addComma {
+				j += `,`
+			}
+			j += `{"` + ip6Metrics[i].Subtype + `":` +
+				`"` + ip6Metrics[i].Value + `"}`
+			addComma = true
+		}
+		j += `]}}`
+	}
+
+	return []byte(j), nil
+}
+
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix
