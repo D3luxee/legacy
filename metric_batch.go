@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"sort"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
@@ -36,10 +37,10 @@ type MetricBatch struct {
 // MetricData contains the metric data from a single measurement
 // time
 type MetricData struct {
-	Time          time.Time      `json:"time"`
-	FloatMetrics  []FloatMetric  `json:"floatMetrics"`
-	StringMetrics []StringMetric `json:"stringMetrics"`
-	IntMetrics    []IntMetric    `json:"intMetrics"`
+	Time          time.Time     `json:"time"`
+	FloatMetrics  FloatMetrics  `json:"floatMetrics"`
+	StringMetrics StringMetrics `json:"stringMetrics"`
+	IntMetrics    IntMetrics    `json:"intMetrics"`
 }
 
 // FloatMetric represents a single metric value of type float64
@@ -49,6 +50,9 @@ type FloatMetric struct {
 	Value   float64 `json:"value"`
 }
 
+// FloatMetrics is a FloatMetric collection for sort.Interface
+type FloatMetrics []FloatMetric
+
 // StringMetric represents a single metric value of type string
 type StringMetric struct {
 	Metric  string `json:"metric"`
@@ -56,12 +60,18 @@ type StringMetric struct {
 	Value   string `json:"value"`
 }
 
+// StringMetrics is a StringMetric collection for sort.Interface
+type StringMetrics []StringMetric
+
 // IntMetric represents a single metric value of type int64
 type IntMetric struct {
 	Metric  string `json:"metric"`
 	Subtype string `json:"subtype"`
 	Value   int64  `json:"value"`
 }
+
+// IntMetrics is a IntMetric collection for sort.Interface
+type IntMetrics []IntMetric
 
 // UnmarshalJSON implements the logic required to parse the JSON
 // wireformat into a struct.
@@ -205,6 +215,51 @@ func floatIsInt(f float64) bool {
 		return true
 	}
 	return false
+}
+
+// Len returns the length of the collection
+func (slice FloatMetrics) Len() int {
+	return len(slice)
+}
+
+// Less sorts in ascending lexical order
+func (slice FloatMetrics) Less(i, j int) bool {
+	return slice[i].Metric < slice[j].Metric
+}
+
+// Swap switches the position of the slice elements i, j
+func (slice FloatMetrics) Swap(i, j int) {
+	slice[i], slice[j] = slice[j], slice[i]
+}
+
+// Len returns the length of the collection
+func (slice StringMetrics) Len() int {
+	return len(slice)
+}
+
+// Less sorts in ascending lexical order
+func (slice StringMetrics) Less(i, j int) bool {
+	return slice[i].Metric < slice[j].Metric
+}
+
+// Swap switches the position of the slice elements i, j
+func (slice StringMetrics) Swap(i, j int) {
+	slice[i], slice[j] = slice[j], slice[i]
+}
+
+// Len returns the length of the collection
+func (slice IntMetrics) Len() int {
+	return len(slice)
+}
+
+// Less sorts in ascending lexical order
+func (slice IntMetrics) Less(i, j int) bool {
+	return slice[i].Metric < slice[j].Metric
+}
+
+// Swap switches the position of the slice elements i, j
+func (slice IntMetrics) Swap(i, j int) {
+	slice[i], slice[j] = slice[j], slice[i]
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix
