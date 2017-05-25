@@ -126,7 +126,7 @@ loop:
 		case `map`:
 			parseMap(val.(map[string]interface{}), data, metric)
 		case `slice`:
-			parseSlice(val.([]interface{}), data, metric)
+			parseSlice(val.([]interface{}), data, metric, key)
 		case `string`:
 			parseMapString(key, val.(string), metric, data)
 		case `float64`:
@@ -148,7 +148,7 @@ loop:
 
 // parseSlice is used in MetricBatch.UnmarshalJSON to parse
 // encountered []interface{} via reflection
-func parseSlice(s []interface{}, data *MetricData, metric string) {
+func parseSlice(s []interface{}, data *MetricData, metric, key string) {
 loop:
 	for _, val := range s {
 		vval := reflect.ValueOf(&val).Elem()
@@ -156,7 +156,9 @@ loop:
 		case `map`:
 			parseMap(val.(map[string]interface{}), data, metric)
 		case `slice`:
-			parseSlice(val.([]interface{}), data, metric)
+			parseSlice(val.([]interface{}), data, metric, key)
+		case `string`:
+			parseSliceString(key, val.(string), metric, data)
 		default:
 			msg := fmt.Sprintf("parseSlice unknown type: %s",
 				vval.Elem().Kind().String())
@@ -173,6 +175,16 @@ loop:
 // parseMapString decodes a single key/value pair key, val with a
 // string value
 func parseMapString(key, val, metric string, data *MetricData) {
+	s := StringMetric{
+		Metric:  metric,
+		Subtype: key,
+		Value:   val,
+	}
+	data.StringMetrics = append(data.StringMetrics, s)
+}
+
+// parseSliceString decodes a string value from a slice
+func parseSliceString(key, val, metric string, data *MetricData) {
 	s := StringMetric{
 		Metric:  metric,
 		Subtype: key,
