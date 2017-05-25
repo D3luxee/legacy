@@ -133,6 +133,8 @@ loop:
 			parseMapFloat(key, metric, val.(float64), data)
 		case `int64`:
 			parseMapInt(key, metric, val.(int64), data)
+		case `bool`:
+			parseMapString(key, fmt.Sprintf("%t", val.(bool)), metric, data)
 		default:
 			msg := fmt.Sprintf("parseMap unknown type: %s",
 				vval.Elem().Kind().String())
