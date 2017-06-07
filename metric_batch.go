@@ -308,7 +308,7 @@ fail:
 	return []byte{}, nil
 }
 
-// MarshalJSON ...
+// MarshalJSON assembles a JSON string for MetricData
 func (m *MetricData) MarshalJSON() ([]byte, error) {
 	var err error
 	var mBuf []byte
@@ -358,7 +358,7 @@ fail:
 	return []byte{}, err
 }
 
-// MarshalJSON ...
+// MarshalJSON assembles a JSON substring for FloatMetrics
 func (slice FloatMetrics) MarshalJSON() ([]byte, error) {
 	var lastMetric string
 	var j string
@@ -391,7 +391,7 @@ func (slice FloatMetrics) MarshalJSON() ([]byte, error) {
 	return []byte(j), nil
 }
 
-// MarshalJSON ...
+// MarshalJSON assembles a JSON substring for IntMetrics
 func (slice IntMetrics) MarshalJSON() ([]byte, error) {
 	var lastMetric string
 	var j string
@@ -424,7 +424,7 @@ func (slice IntMetrics) MarshalJSON() ([]byte, error) {
 	return []byte(j), nil
 }
 
-// MarshalJSON ...
+// MarshalJSON assembles a JSON substring for StringMetrics
 func (slice StringMetrics) MarshalJSON() ([]byte, error) {
 	var lastMetric string
 	var j string
