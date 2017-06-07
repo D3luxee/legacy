@@ -22,7 +22,7 @@ import (
 )
 
 // Debug set to true means unexpected input will be skipped and
-// spewed to StdErr. When set to false, it will panic instead.
+// spewed to StdErr. When set to false, it will return error instead.
 var Debug = false
 
 // MetricBatch represents a single request payload as sent by the
@@ -93,7 +93,9 @@ func (m *MetricBatch) UnmarshalJSON(data []byte) error {
 		metrics := hlp.Data[i].Metrics.(map[string]interface{})
 
 		for metric, val := range metrics {
-			parseMap(val.(map[string]interface{}), &data, metric)
+			if err := parseMap(val.(map[string]interface{}), &data, metric); err != nil {
+				return err
+			}
 		}
 
 		m.Data = append(m.Data, data)
@@ -118,15 +120,19 @@ type metricDataParse struct {
 
 // parseMap is used in MetricBatch.UnmarshalJSON to parse
 // encountered map[string]interface{} via reflection
-func parseMap(m map[string]interface{}, data *MetricData, metric string) {
+func parseMap(m map[string]interface{}, data *MetricData, metric string) error {
 loop:
 	for key, val := range m {
 		vval := reflect.ValueOf(&val).Elem()
 		switch vval.Elem().Kind().String() {
 		case `map`:
-			parseMap(val.(map[string]interface{}), data, metric)
+			if err := parseMap(val.(map[string]interface{}), data, metric); err != nil {
+				return err
+			}
 		case `slice`:
-			parseSlice(val.([]interface{}), data, metric, key)
+			if err := parseSlice(val.([]interface{}), data, metric, key); err != nil {
+				return err
+			}
 		case `string`:
 			parseMapString(key, val.(string), metric, data)
 		case `float64`:
@@ -143,22 +149,27 @@ loop:
 				spew.Fdump(os.Stderr, val)
 				continue loop
 			}
-			panic(msg)
+			return fmt.Errorf(msg)
 		}
 	}
+	return nil
 }
 
 // parseSlice is used in MetricBatch.UnmarshalJSON to parse
 // encountered []interface{} via reflection
-func parseSlice(s []interface{}, data *MetricData, metric, key string) {
+func parseSlice(s []interface{}, data *MetricData, metric, key string) error {
 loop:
 	for _, val := range s {
 		vval := reflect.ValueOf(&val).Elem()
 		switch vval.Elem().Kind().String() {
 		case `map`:
-			parseMap(val.(map[string]interface{}), data, metric)
+			if err := parseMap(val.(map[string]interface{}), data, metric); err != nil {
+				return err
+			}
 		case `slice`:
-			parseSlice(val.([]interface{}), data, metric, key)
+			if err := parseSlice(val.([]interface{}), data, metric, key); err != nil {
+				return err
+			}
 		case `string`:
 			parseSliceString(key, val.(string), metric, data)
 		default:
@@ -169,9 +180,10 @@ loop:
 				spew.Fdump(os.Stderr, val)
 				continue loop
 			}
-			panic(msg)
+			return fmt.Errorf(msg)
 		}
 	}
+	return nil
 }
 
 // parseMapString decodes a single key/value pair key, val with a
