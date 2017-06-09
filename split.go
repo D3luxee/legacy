@@ -29,6 +29,7 @@ func (m *MetricBatch) Split() []MetricSplit {
 			for elem := range c {
 				res = append(res, elem)
 			}
+			cwg.Done()
 		}(collect)
 
 		// feeder go routines that will convert the slices and push
@@ -48,6 +49,7 @@ func (m *MetricBatch) Split() []MetricSplit {
 				split.Tags = []string{fMetric.Subtype}
 				c <- split
 			}
+			wg.Done()
 		}(collect)
 
 		// convert string metrics
@@ -64,6 +66,7 @@ func (m *MetricBatch) Split() []MetricSplit {
 				split.Tags = []string{sMetric.Subtype}
 				c <- split
 			}
+			wg.Done()
 		}(collect)
 
 		// convert integer metrics
@@ -80,6 +83,7 @@ func (m *MetricBatch) Split() []MetricSplit {
 				split.Tags = []string{iMetric.Subtype}
 				c <- split
 			}
+			wg.Done()
 		}(collect)
 		// wait for feeder
 		wg.Wait()
