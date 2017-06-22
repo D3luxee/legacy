@@ -33,3 +33,4 @@ _testmain.go
 
 # Dev
 attic/
+/cmd/metricsocket-client/metricsocket-client
