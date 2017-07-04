@@ -26,12 +26,40 @@ type MetricSocket struct {
 	config   *erebos.Config
 	registry *metrics.Registry
 	format   Formatter
+	fetching bool
+	fetch    Fetcher
 }
 
 // Formatter is a function that will format the metrics Registry metrics
 // into PluginMetricBatch. The returned function will be called via
 // metrics.Registry.Each()
 type Formatter func(*PluginMetricBatch) func(string, interface{})
+
+// Fetcher is a function that will fill the metrics Registry with current
+// values.
+type Fetcher func() error
+
+// NewFetchingMetricSocket returns a new MetricSocket that updates the
+// metrics when called. To create the socket and start the listener, the
+// Run() method must be called. Returns nil if the provided configuration
+// contains an empty SocketPath
+func NewFetchingMetricSocket(conf *erebos.Config, reg *metrics.Registry,
+	death chan error, format Formatter, fetch Fetcher) *MetricSocket {
+	if conf.Legacy.SocketPath == `` {
+		return nil
+	}
+
+	s := MetricSocket{
+		config:   conf,
+		registry: reg,
+		death:    death,
+		format:   format,
+		fetching: true,
+		fetch:    fetch,
+	}
+	s.Errors = make(chan error)
+	return &s
+}
 
 // NewMetricSocket returns a new MetricSocket. To create the socket and
 // start the listener, the Run() method must be called. Returns nil if
@@ -126,6 +154,11 @@ func (s *MetricSocket) handleConn(conn net.Conn) {
 // metrics returns the current metrics as []byte with a json marshalled
 // PluginMetricBatch inside
 func (s *MetricSocket) metrics() ([]byte, error) {
+	if s.fetching {
+		if err := s.fetch(); err != nil {
+			return nil, err
+		}
+	}
 	m := PluginMetricBatch{
 		Metrics: []PluginMetric{},
 	}
