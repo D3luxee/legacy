@@ -90,6 +90,9 @@ func (m *MetricBatch) UnmarshalJSON(data []byte) error {
 		data.StringMetrics = make([]StringMetric, 0)
 		data.Time = time.Unix(hlp.Data[i].CTime, 0).UTC()
 
+		if hlp.Data[i].Metrics == nil {
+			continue
+		}
 		metrics := hlp.Data[i].Metrics.(map[string]interface{})
 
 		for metric, val := range metrics {
