@@ -332,7 +332,7 @@ func (m *MetricData) MarshalJSON() ([]byte, error) {
 
 	j = `{"ctime":`
 	j += fmt.Sprintf("%.0f", float64(m.Time.Unix())) + `,`
-	j += `{"metrics":{`
+	j += `"metrics":{`
 
 	if m.FloatMetrics.Len() > 0 {
 		hasFloatMetrics = true
@@ -366,7 +366,7 @@ func (m *MetricData) MarshalJSON() ([]byte, error) {
 		j += string(mBuf)
 	}
 
-	j += `}`
+	j += `}}`
 	return []byte(j), nil
 
 fail:
