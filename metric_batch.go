@@ -154,7 +154,11 @@ loop:
 		case `int64`:
 			parseMapInt(key, metric, val.(int64), data)
 		case `bool`:
-			parseString(key, fmt.Sprintf("%t", val.(bool)), metric, data)
+			if val.(bool) {
+				parseMapInt(key, metric, 1, data)
+				continue loop
+			}
+			parseMapInt(key, metric, 0, data)
 		default:
 			msg := fmt.Sprintf("parseMap unknown type: %s",
 				vval.Elem().Kind().String())
