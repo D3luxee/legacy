@@ -127,6 +127,14 @@ type metricDataParse struct {
 func parseMap(m map[string]interface{}, data *MetricData, metric string) error {
 loop:
 	for key, val := range m {
+		// call special snowflake parser for countlst maps
+		if key == `countlst` {
+			if err := parseCountlstSlice(val.([]interface{}),
+				data, metric, key); err != nil {
+				return err
+			}
+			continue loop
+		}
 		vval := reflect.ValueOf(&val).Elem()
 		switch vval.Elem().Kind().String() {
 		case `map`:
@@ -190,6 +198,113 @@ loop:
 			}
 			return fmt.Errorf(msg)
 		}
+	}
+	return nil
+}
+
+// parseCountlstSlice is used in MetricBatch.UnmarshalJSON to parse
+// special countlst slices that contain maps which represent a single
+// metric
+func parseCountlstSlice(s []interface{}, data *MetricData, metric, key string) error {
+	switch metric {
+	case `/sys/net/ipvs/conn/vipconns`:
+		for _, val := range s {
+			mp := val.(map[string]interface{})
+			vip, err := formatHexIP4(mp[`to IP`].(string))
+			if err != nil {
+				return err
+			}
+			cnt, err := strconv.Atoi(mp[`count`].(string))
+			if err != nil {
+				return err
+			}
+			i := IntMetric{
+				Metric:  metric,
+				Subtype: vip,
+				Value:   int64(cnt),
+			}
+			data.IntMetrics = append(data.IntMetrics, i)
+		}
+	case `/sys/net/ipvs/conn/vipstatecount`:
+		for _, val := range s {
+			mp := val.(map[string]interface{})
+			vip, err := formatHexIP4(mp[`to IP`].(string))
+			if err != nil {
+				return err
+			}
+			cnt, err := strconv.Atoi(mp[`count`].(string))
+			if err != nil {
+				return err
+			}
+			state := mp[`state`].(string)
+			i := IntMetric{
+				Metric:  metric,
+				Subtype: fmt.Sprintf("%s/%s", vip, state),
+				Value:   int64(cnt),
+			}
+			data.IntMetrics = append(data.IntMetrics, i)
+		}
+	case `/sys/net/ipvs/conn/serverstatecount`:
+		for _, val := range s {
+			mp := val.(map[string]interface{})
+			vip, err := formatHexIP4(mp[`destination IP`].(string))
+			if err != nil {
+				return err
+			}
+			cnt, err := strconv.Atoi(mp[`count`].(string))
+			if err != nil {
+				return err
+			}
+			state := mp[`state`].(string)
+			i := IntMetric{
+				Metric:  metric,
+				Subtype: fmt.Sprintf("%s/%s", vip, state),
+				Value:   int64(cnt),
+			}
+			data.IntMetrics = append(data.IntMetrics, i)
+		}
+	case `/sys/net/ipvs/conn/statecount`:
+		for _, val := range s {
+			mp := val.(map[string]interface{})
+			cnt, err := strconv.Atoi(mp[`count`].(string))
+			if err != nil {
+				return err
+			}
+			state := mp[`state`].(string)
+			i := IntMetric{
+				Metric:  metric,
+				Subtype: state,
+				Value:   int64(cnt),
+			}
+			data.IntMetrics = append(data.IntMetrics, i)
+		}
+	case `/sys/net/ipvs/conn/servercount`:
+		for _, val := range s {
+			mp := val.(map[string]interface{})
+			vip, err := formatHexIP4(mp[`IP`].(string))
+			if err != nil {
+				return err
+			}
+			cnt, err := strconv.Atoi(mp[`count`].(string))
+			if err != nil {
+				return err
+			}
+			i := IntMetric{
+				Metric:  metric,
+				Subtype: vip,
+				Value:   int64(cnt),
+			}
+			data.IntMetrics = append(data.IntMetrics, i)
+		}
+	default:
+		msg := fmt.Sprintf("parseCountlstSlice unknown metric: %s",
+			metric)
+		if Debug {
+			fmt.Fprintln(os.Stderr, msg)
+			spew.Fdump(os.Stderr, s)
+			return nil
+		}
+		return fmt.Errorf(msg)
 	}
 	return nil
 }
