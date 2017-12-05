@@ -16,6 +16,7 @@ import (
 	"os"
 	"reflect"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
@@ -196,6 +197,10 @@ loop:
 // parseString decodes a single key/value pair key, val with a
 // string value
 func parseString(key, val, metric string, data *MetricData) {
+	if i, err := strconv.Atoi(val); err == nil {
+		parseMapInt(key, metric, int64(i), data)
+		return
+	}
 	s := StringMetric{
 		Metric:  metric,
 		Subtype: key,
