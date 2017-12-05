@@ -127,14 +127,6 @@ type metricDataParse struct {
 func parseMap(m map[string]interface{}, data *MetricData, metric string) error {
 loop:
 	for key, val := range m {
-		// call special snowflake parser for countlst maps
-		if key == `countlst` {
-			if err := parseCountlstSlice(val.([]interface{}),
-				data, metric, key); err != nil {
-				return err
-			}
-			continue loop
-		}
 		vval := reflect.ValueOf(&val).Elem()
 		switch vval.Elem().Kind().String() {
 		case `map`:
@@ -143,6 +135,14 @@ loop:
 				return err
 			}
 		case `slice`:
+			// special snowflake: slice of one map per metric
+			if key == `countlst` {
+				if err := parseCountlstSlice(val.([]interface{}),
+					data, metric, key); err != nil {
+					return err
+				}
+				continue loop
+			}
 			if err := parseSlice(val.([]interface{}),
 				data, metric, key); err != nil {
 				return err
