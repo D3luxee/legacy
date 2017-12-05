@@ -146,7 +146,7 @@ loop:
 			}
 			// special snowflake: slice of one map per metric
 			if key == `countlst` {
-				if err := parseCountlstSlice(val.([]interface{}),
+				if err := parseSliceCountlst(val.([]interface{}),
 					data, metric, key); err != nil {
 					return err
 				}
@@ -250,10 +250,10 @@ loop:
 	return nil
 }
 
-// parseCountlstSlice is used in MetricBatch.UnmarshalJSON to parse
+// parseSliceCountlst is used in MetricBatch.UnmarshalJSON to parse
 // special countlst slices that contain maps which represent a single
 // metric
-func parseCountlstSlice(s []interface{}, data *MetricData, metric, key string) error {
+func parseSliceCountlst(s []interface{}, data *MetricData, metric, key string) error {
 	switch metric {
 	case `/sys/net/ipvs/conn/vipconns`:
 		for _, val := range s {
@@ -345,7 +345,7 @@ func parseCountlstSlice(s []interface{}, data *MetricData, metric, key string) e
 			data.IntMetrics = append(data.IntMetrics, i)
 		}
 	default:
-		msg := fmt.Sprintf("parseCountlstSlice unknown metric: %s",
+		msg := fmt.Sprintf("parseSliceCountlst unknown metric: %s",
 			metric)
 		if Debug {
 			fmt.Fprintln(os.Stderr, msg)
