@@ -135,6 +135,15 @@ loop:
 				return err
 			}
 		case `slice`:
+			// special snowflake: multiple neighbors will override
+			// each other during MarshalJSON()
+			if metric == `/sys/net/quagga/bgp/neighbour` {
+				if err := parseSliceStrAsBool(val.([]interface{}),
+					data, metric, key); err != nil {
+					return err
+				}
+				continue loop
+			}
 			// special snowflake: slice of one map per metric
 			if key == `countlst` {
 				if err := parseCountlstSlice(val.([]interface{}),
@@ -192,6 +201,41 @@ loop:
 			}
 		case `string`:
 			parseString(key, val.(string), metric, data)
+		default:
+			msg := fmt.Sprintf("parseSlice unknown type: %s",
+				vval.Elem().Kind().String())
+			if Debug {
+				fmt.Fprintln(os.Stderr, msg)
+				spew.Fdump(os.Stderr, val)
+				continue loop
+			}
+			return fmt.Errorf(msg)
+		}
+	}
+	return nil
+}
+
+// parseSliceStrAsBool is used in MetricBatch.UnmarshalJSON to parse
+// encountered []interface{} via reflection, but its contained
+// string metrics are parsed as integer metrics where the string
+// value becomes the metric key
+func parseSliceStrAsBool(s []interface{}, data *MetricData, metric, key string) error {
+loop:
+	for _, val := range s {
+		vval := reflect.ValueOf(&val).Elem()
+		switch vval.Elem().Kind().String() {
+		case `map`:
+			if err := parseMap(val.(map[string]interface{}),
+				data, metric); err != nil {
+				return err
+			}
+		case `slice`:
+			if err := parseSlice(val.([]interface{}),
+				data, metric, key); err != nil {
+				return err
+			}
+		case `string`:
+			parseMapInt(val.(string), metric, 1, data)
 		default:
 			msg := fmt.Sprintf("parseSlice unknown type: %s",
 				vval.Elem().Kind().String())
