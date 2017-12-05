@@ -360,6 +360,34 @@ func parseCountlstSlice(s []interface{}, data *MetricData, metric, key string) e
 // parseString decodes a single key/value pair key, val with a
 // string value
 func parseString(key, val, metric string, data *MetricData) {
+	// this metric a number for bgp state active, but a string
+	// for others. Convert this to an IntMetric based on the finite
+	// state machine states of BGP
+	// RFC1163, p.24ff
+	// git.savannah.nongnu.org/quagga/quagga/bgpd/bgp_debug.c#L60-70
+	if metric == `/sys/net/quagga/bgp/connstate` {
+		if _, err := strconv.Atoi(val); err == nil {
+			parseMapInt(key, metric, 6, data)
+			return
+		}
+		switch val {
+		case `Idle`:
+			parseMapInt(key, metric, 1, data)
+		case `Connect`:
+			parseMapInt(key, metric, 2, data)
+		case `Active`:
+			parseMapInt(key, metric, 3, data)
+		case `OpenSent`:
+			parseMapInt(key, metric, 4, data)
+		case `OpenConfirm`:
+			parseMapInt(key, metric, 5, data)
+		case `Established`:
+			parseMapInt(key, metric, 6, data)
+		default:
+			parseMapInt(key, metric, 0, data)
+		}
+		return
+	}
 	if i, err := strconv.Atoi(val); err == nil {
 		parseMapInt(key, metric, int64(i), data)
 		return
