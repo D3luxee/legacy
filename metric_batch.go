@@ -607,6 +607,7 @@ func (slice FloatMetrics) MarshalJSON() ([]byte, error) {
 		switch lastMetric {
 		case ``:
 			// first element
+			lastMetric = slice[i].Metric
 			j = `"` + slice[i].Metric + `":{` +
 				`"` + slice[i].Subtype + `":` +
 				fmt.Sprintf("%.6f", slice[i].Value)
@@ -640,6 +641,7 @@ func (slice IntMetrics) MarshalJSON() ([]byte, error) {
 		switch lastMetric {
 		case ``:
 			// first element
+			lastMetric = slice[i].Metric
 			j = `"` + slice[i].Metric + `":{` +
 				`"` + slice[i].Subtype + `":` +
 				fmt.Sprintf("%.6f", float64(slice[i].Value))
