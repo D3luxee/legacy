@@ -161,13 +161,13 @@ loop:
 		case `float64`:
 			parseMapFloat(key, metric, val.(float64), data)
 		case `int64`:
-			parseMapInt(key, metric, val.(int64), data)
+			parseInt(key, metric, val.(int64), data)
 		case `bool`:
 			if val.(bool) {
-				parseMapInt(key, metric, 1, data)
+				parseInt(key, metric, 1, data)
 				continue loop
 			}
-			parseMapInt(key, metric, 0, data)
+			parseInt(key, metric, 0, data)
 		default:
 			msg := fmt.Sprintf("parseMap unknown type: %s",
 				vval.Elem().Kind().String())
@@ -235,7 +235,7 @@ loop:
 				return err
 			}
 		case `string`:
-			parseMapInt(val.(string), metric, 1, data)
+			parseInt(val.(string), metric, 1, data)
 		default:
 			msg := fmt.Sprintf("parseSlice unknown type: %s",
 				vval.Elem().Kind().String())
@@ -367,29 +367,32 @@ func parseString(key, val, metric string, data *MetricData) {
 	// git.savannah.nongnu.org/quagga/quagga/bgpd/bgp_debug.c#L60-70
 	if metric == `/sys/net/quagga/bgp/connstate` {
 		if _, err := strconv.Atoi(val); err == nil {
-			parseMapInt(key, metric, 6, data)
+			parseInt(key, metric, 6, data)
 			return
 		}
 		switch val {
 		case `Idle`:
-			parseMapInt(key, metric, 1, data)
+			parseInt(key, metric, 1, data)
 		case `Connect`:
-			parseMapInt(key, metric, 2, data)
+			parseInt(key, metric, 2, data)
 		case `Active`:
-			parseMapInt(key, metric, 3, data)
+			parseInt(key, metric, 3, data)
 		case `OpenSent`:
-			parseMapInt(key, metric, 4, data)
+			parseInt(key, metric, 4, data)
 		case `OpenConfirm`:
-			parseMapInt(key, metric, 5, data)
+			parseInt(key, metric, 5, data)
 		case `Established`:
-			parseMapInt(key, metric, 6, data)
+			parseInt(key, metric, 6, data)
 		default:
-			parseMapInt(key, metric, 0, data)
+			parseInt(key, metric, 0, data)
 		}
 		return
 	}
+
+	// check if the string is actually a number, parse as IntMetric
+	// if it is
 	if i, err := strconv.Atoi(val); err == nil {
-		parseMapInt(key, metric, int64(i), data)
+		parseInt(key, metric, int64(i), data)
 		return
 	}
 	s := StringMetric{
@@ -401,11 +404,11 @@ func parseString(key, val, metric string, data *MetricData) {
 }
 
 // parseMapFloat decodes a single key/value pair key, val with a
-// float64 value. It calls parseMapInt if the float64 value can be
+// float64 value. It calls parseInt if the float64 value can be
 // represented by an int64
 func parseMapFloat(key, metric string, val float64, data *MetricData) {
 	if floatIsInt(val) {
-		parseMapInt(key, metric, int64(val), data)
+		parseInt(key, metric, int64(val), data)
 		return
 	}
 	f := FloatMetric{
@@ -416,9 +419,9 @@ func parseMapFloat(key, metric string, val float64, data *MetricData) {
 	data.FloatMetrics = append(data.FloatMetrics, f)
 }
 
-// parseMapInt decodes a single key/value pair key, val with a
+// parseInt decodes a single key/value pair key, val with a
 // int64 value.
-func parseMapInt(key, metric string, val int64, data *MetricData) {
+func parseInt(key, metric string, val int64, data *MetricData) {
 	i := IntMetric{
 		Metric:  metric,
 		Subtype: key,
