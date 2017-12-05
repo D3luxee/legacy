@@ -129,11 +129,13 @@ loop:
 		vval := reflect.ValueOf(&val).Elem()
 		switch vval.Elem().Kind().String() {
 		case `map`:
-			if err := parseMap(val.(map[string]interface{}), data, metric); err != nil {
+			if err := parseMap(val.(map[string]interface{}),
+				data, metric); err != nil {
 				return err
 			}
 		case `slice`:
-			if err := parseSlice(val.([]interface{}), data, metric, key); err != nil {
+			if err := parseSlice(val.([]interface{}),
+				data, metric, key); err != nil {
 				return err
 			}
 		case `string`:
@@ -166,11 +168,13 @@ loop:
 		vval := reflect.ValueOf(&val).Elem()
 		switch vval.Elem().Kind().String() {
 		case `map`:
-			if err := parseMap(val.(map[string]interface{}), data, metric); err != nil {
+			if err := parseMap(val.(map[string]interface{}),
+				data, metric); err != nil {
 				return err
 			}
 		case `slice`:
-			if err := parseSlice(val.([]interface{}), data, metric, key); err != nil {
+			if err := parseSlice(val.([]interface{}),
+				data, metric, key); err != nil {
 				return err
 			}
 		case `string`:
