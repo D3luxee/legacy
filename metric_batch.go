@@ -290,6 +290,69 @@ func (slice IntMetrics) Swap(i, j int) {
 	slice[i], slice[j] = slice[j], slice[i]
 }
 
+// formatHexIP converts IP addresses formatted as hexadecimal bytes
+// into more regular formats
+func formatHexIP(hexIP string) (string, error) {
+	switch len([]byte(hexIP)) {
+	case 8:
+		return formatHexIP4(hexIP)
+	case 32:
+		return formatHexIP6(hexIP)
+	default:
+		msg := fmt.Sprintf("hexIP unknown length: %d",
+			len([]byte(hexIP)))
+		if Debug {
+			fmt.Fprintln(os.Stderr, msg)
+			spew.Fdump(os.Stderr, hexIP)
+			return `-1`, nil
+		}
+		return ``, fmt.Errorf(msg)
+	}
+}
+
+// formatHexIP4 converts IP4 addresses from hexadecimal bytes to
+// dotted decimal
+func formatHexIP4(hexIP string) (string, error) {
+	slice := []byte(hexIP)
+	if len(slice) != 8 {
+		return ``, fmt.Errorf(`not ip4`)
+	}
+	var x int64
+	var err error
+	var IP string
+	if x, err = strconv.ParseInt(
+		string(slice[0:2]), 16, 64,
+	); err != nil {
+		return ``, err
+	}
+	IP += strconv.Itoa(int(x)) + `.`
+	if x, err = strconv.ParseInt(
+		string(slice[2:4]), 16, 64,
+	); err != nil {
+		return ``, err
+	}
+	IP += strconv.Itoa(int(x)) + `.`
+	if x, err = strconv.ParseInt(
+		string(slice[4:6]), 16, 64,
+	); err != nil {
+		return ``, err
+	}
+	IP += strconv.Itoa(int(x)) + `.`
+	if x, err = strconv.ParseInt(
+		string(slice[6:]), 16, 64,
+	); err != nil {
+		return ``, err
+	}
+	IP += strconv.Itoa(int(x))
+	return IP, nil
+}
+
+// formatHexIP6 converts IP6 addresses from hexadecimal bytes to
+// colon notation
+func formatHexIP6(hexIP string) (string, error) {
+	return ``, fmt.Errorf(`formatHexIP6: not implemented`)
+}
+
 // MarshalJSON marshals a struct MetricBatch into the reduced wire
 // format expected by downstream consumers
 func (m *MetricBatch) MarshalJSON() ([]byte, error) {
