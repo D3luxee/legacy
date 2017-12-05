@@ -159,7 +159,7 @@ loop:
 		case `string`:
 			parseString(key, val.(string), metric, data)
 		case `float64`:
-			parseMapFloat(key, metric, val.(float64), data)
+			parseFloat(key, metric, val.(float64), data)
 		case `int64`:
 			parseInt(key, metric, val.(int64), data)
 		case `bool`:
@@ -403,10 +403,10 @@ func parseString(key, val, metric string, data *MetricData) {
 	data.StringMetrics = append(data.StringMetrics, s)
 }
 
-// parseMapFloat decodes a single key/value pair key, val with a
+// parseFloat decodes a single key/value pair key, val with a
 // float64 value. It calls parseInt if the float64 value can be
 // represented by an int64
-func parseMapFloat(key, metric string, val float64, data *MetricData) {
+func parseFloat(key, metric string, val float64, data *MetricData) {
 	if floatIsInt(val) {
 		parseInt(key, metric, int64(val), data)
 		return
