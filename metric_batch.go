@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"regexp"
 	"sort"
 	"strconv"
 	"time"
@@ -370,6 +371,7 @@ func parseString(key, val, metric string, data *MetricData) {
 			parseInt(key, metric, 6, data)
 			return
 		}
+		// error fallthrough: handle non-number case
 		switch val {
 		case `Idle`:
 			parseInt(key, metric, 1, data)
@@ -389,12 +391,23 @@ func parseString(key, val, metric string, data *MetricData) {
 		return
 	}
 
+	// this metric has a string value that represents a time
+	// duration. It can be converted to seconds.
+	if metric == `/sys/net/quagga/bgp/connage` {
+		if age, err := durationToSeconds(val); err == nil {
+			parseInt(key, metric, age, data)
+			return
+		}
+		// error fallthrough: handle as string metric
+	}
+
 	// check if the string is actually a number, parse as IntMetric
 	// if it is
 	if i, err := strconv.Atoi(val); err == nil {
 		parseInt(key, metric, int64(i), data)
 		return
 	}
+
 	s := StringMetric{
 		Metric:  metric,
 		Subtype: key,
@@ -772,6 +785,99 @@ loop:
 	}
 
 	return []byte(j), nil
+}
+
+// durationToSeconds parses a quagga connection age duration string
+// into a number of seconds
+func durationToSeconds(duration string) (int64, error) {
+	var years, weeks, days, hours, minutes, seconds int
+	var err error
+	var age time.Duration
+
+	// as defined by quagga
+	s := time.Second
+	m := s * 60
+	h := m * 60
+	d := h * 24
+	w := d * 7
+	y := d * 365
+
+	// format used for more than one year connection age
+	regxInf := regexp.MustCompile(
+		`^(?P<years>\d+)y(?P<weeks>\d+)w(?P<days>\d+)d$`,
+	)
+	// format used for less than one year connection age
+	regxYear := regexp.MustCompile(
+		`^(?P<weeks>\d+)w(?P<days>\d+)d(?P<hours>\d+)h$`,
+	)
+	// format used for less than one week connection age
+	regxWeek := regexp.MustCompile(
+		`^(?P<days>\d+)d(?P<hours>\d+)h(?P<minutes>\d+)m$`,
+	)
+	// format used for less than one day connection age
+	regxDay := regexp.MustCompile(
+		`^(?P<hours>\d+):(?P<minutes>\d+):(?P<seconds>\d+)$`,
+	)
+
+	switch {
+	case regxInf.MatchString(duration):
+		matches := regxInf.FindStringSubmatch(duration)
+		if years, err = strconv.Atoi(matches[1]); err != nil {
+			return 0, err
+		}
+		if weeks, err = strconv.Atoi(matches[2]); err != nil {
+			return 0, err
+		}
+		if days, err = strconv.Atoi(matches[3]); err != nil {
+			return 0, err
+		}
+		age = (itd(years) * y) + (itd(weeks) * w) + (itd(days) * d)
+	case regxYear.MatchString(duration):
+		matches := regxYear.FindStringSubmatch(duration)
+		if weeks, err = strconv.Atoi(matches[1]); err != nil {
+			return 0, err
+		}
+		if days, err = strconv.Atoi(matches[2]); err != nil {
+			return 0, err
+		}
+		if hours, err = strconv.Atoi(matches[3]); err != nil {
+			return 0, err
+		}
+		age = (itd(weeks) * w) + (itd(days) * d) + (itd(hours) * h)
+	case regxWeek.MatchString(duration):
+		matches := regxWeek.FindStringSubmatch(duration)
+		if days, err = strconv.Atoi(matches[1]); err != nil {
+			return 0, err
+		}
+		if hours, err = strconv.Atoi(matches[2]); err != nil {
+			return 0, err
+		}
+		if minutes, err = strconv.Atoi(matches[3]); err != nil {
+			return 0, err
+		}
+		age = (itd(days) * d) + (itd(hours) * h) + (itd(minutes) * m)
+	case regxDay.MatchString(duration):
+		matches := regxDay.FindStringSubmatch(duration)
+		if hours, err = strconv.Atoi(matches[1]); err != nil {
+			return 0, err
+		}
+		if minutes, err = strconv.Atoi(matches[2]); err != nil {
+			return 0, err
+		}
+		if seconds, err = strconv.Atoi(matches[3]); err != nil {
+			return 0, err
+		}
+		age = (itd(hours) * h) + (itd(minutes) * m) + (itd(seconds) * s)
+	default:
+		return 0, fmt.Errorf("durationToSeconds: no regexp matched %s",
+			duration)
+	}
+	return int64(age.Seconds()), nil
+}
+
+// itd converts from int to time.Duration
+func itd(num int) time.Duration {
+	return time.Duration(num)
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix
