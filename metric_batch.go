@@ -139,13 +139,13 @@ loop:
 				return err
 			}
 		case `string`:
-			parseMapString(key, val.(string), metric, data)
+			parseString(key, val.(string), metric, data)
 		case `float64`:
 			parseMapFloat(key, metric, val.(float64), data)
 		case `int64`:
 			parseMapInt(key, metric, val.(int64), data)
 		case `bool`:
-			parseMapString(key, fmt.Sprintf("%t", val.(bool)), metric, data)
+			parseString(key, fmt.Sprintf("%t", val.(bool)), metric, data)
 		default:
 			msg := fmt.Sprintf("parseMap unknown type: %s",
 				vval.Elem().Kind().String())
@@ -178,7 +178,7 @@ loop:
 				return err
 			}
 		case `string`:
-			parseSliceString(key, val.(string), metric, data)
+			parseString(key, val.(string), metric, data)
 		default:
 			msg := fmt.Sprintf("parseSlice unknown type: %s",
 				vval.Elem().Kind().String())
@@ -193,19 +193,9 @@ loop:
 	return nil
 }
 
-// parseMapString decodes a single key/value pair key, val with a
+// parseString decodes a single key/value pair key, val with a
 // string value
-func parseMapString(key, val, metric string, data *MetricData) {
-	s := StringMetric{
-		Metric:  metric,
-		Subtype: key,
-		Value:   val,
-	}
-	data.StringMetrics = append(data.StringMetrics, s)
-}
-
-// parseSliceString decodes a string value from a slice
-func parseSliceString(key, val, metric string, data *MetricData) {
+func parseString(key, val, metric string, data *MetricData) {
 	s := StringMetric{
 		Metric:  metric,
 		Subtype: key,
