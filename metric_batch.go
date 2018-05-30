@@ -153,6 +153,18 @@ loop:
 				}
 				continue loop
 			}
+			// special snowflake: parse but swap metric Subtype and Value
+			switch metric {
+			case `/sys/net/ipv4_addr`, `/sys/net/ipv6_addr`:
+				if key == `ips` {
+					if err := parseSliceIPAddr(val.([]interface{}),
+						data, metric, key); err != nil {
+						return err
+					}
+					continue loop
+				}
+			}
+
 			if err := parseSlice(val.([]interface{}),
 				data, metric, key); err != nil {
 				return err
