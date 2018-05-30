@@ -443,6 +443,61 @@ func parseInt(key, metric string, val int64, data *MetricData) {
 	data.IntMetrics = append(data.IntMetrics, i)
 }
 
+// parseSliceIPAddr is used in MetricBatch.UnmarshalJSON to parse
+// encountered []interface{} via reflection if the slice contains
+// IPAddress information
+func parseSliceIPAddr(s []interface{}, data *MetricData, metric, key string) error {
+loop:
+	for _, val := range s {
+		vval := reflect.ValueOf(&val).Elem()
+		switch vval.Elem().Kind().String() {
+		case `map`:
+			spew.Fdump(os.Stderr, `parseSliceIPAddr`, `map`)
+			if err := parseMapIPAddr(val.(map[string]interface{}),
+				data, metric); err != nil {
+				return err
+			}
+		default:
+			msg := fmt.Sprintf("parseSlice unknown type: %s",
+				vval.Elem().Kind().String())
+			if Debug {
+				fmt.Fprintln(os.Stderr, msg)
+				spew.Fdump(os.Stderr, val)
+				continue loop
+			}
+			return fmt.Errorf(msg)
+		}
+	}
+	return nil
+}
+
+// parseMapIPAddr is used in MetricBatch.UnmarshalJSON to parse
+// encountered map[string]interface{} via reflection if the map contains
+// IPAddress information
+func parseMapIPAddr(m map[string]interface{}, data *MetricData, metric string) error {
+loop:
+	for key, val := range m {
+		vval := reflect.ValueOf(&val).Elem()
+		switch vval.Elem().Kind().String() {
+		case `string`:
+			// INTENTIONAL key/value swap to convert from array of
+			// interface:ipaddr pairs to ipaddr:interface thus making
+			// the keys unique
+			parseString(val.(string), key, metric, data)
+		default:
+			msg := fmt.Sprintf("parseMap unknown type: %s",
+				vval.Elem().Kind().String())
+			if Debug {
+				fmt.Fprintln(os.Stderr, msg)
+				spew.Fdump(os.Stderr, val)
+				continue loop
+			}
+			return fmt.Errorf(msg)
+		}
+	}
+	return nil
+}
+
 // floatIsInt returns true if the float64 value can be represented
 // by an int64. False otherwise.
 func floatIsInt(f float64) bool {
