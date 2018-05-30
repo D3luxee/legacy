@@ -38,12 +38,12 @@ func ElasticFromBatch(batch *MetricBatch) []MetricElastic {
 				if _, ok := e.Collect[m.Metric]; !ok {
 					e.Collect[m.Metric] = make(map[string][]string)
 				}
-				if v := e.Collect[m.Metric][m.Subtype]; v == nil {
-					e.Collect[m.Metric][m.Subtype] = []string{}
+				if v := e.Collect[m.Metric][m.Value]; v == nil {
+					e.Collect[m.Metric][m.Value] = []string{}
 				}
-				e.Collect[m.Metric][m.Subtype] = append(
-					e.Collect[m.Metric][m.Subtype],
-					m.Value,
+				e.Collect[m.Metric][m.Value] = append(
+					e.Collect[m.Metric][m.Value],
+					m.Subtype,
 				)
 			default:
 				if _, ok := e.Metrics[m.Metric]; !ok {
