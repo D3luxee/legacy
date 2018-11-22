@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package main // import "github.com/mjolnir42/legacy/cmd/metricsocket-client"
+package main // import "github.com/solnx/legacy/cmd/metricsocket-client"
 
 import (
 	"flag"

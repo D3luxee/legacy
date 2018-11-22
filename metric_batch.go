@@ -8,7 +8,7 @@
 
 // Package legacy implements decoding routines for legacy metric
 // formats.
-package legacy // import "github.com/mjolnir42/legacy"
+package legacy // import "github.com/solnx/legacy"
 
 import (
 	"encoding/json"

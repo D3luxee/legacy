@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package legacy // import "github.com/mjolnir42/legacy"
+package legacy // import "github.com/solnx/legacy"
 
 import (
 	"encoding/json"
