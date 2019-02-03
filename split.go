@@ -108,12 +108,12 @@ func (m *MetricBatch) Split() []MetricSplit {
 	hostname := ""
 	for _, metric := range res {
 		if metric.Path == "/sys/hostname" {
-			hostname = metric.Value()
+			hostname = metric.Val.StrVal
 			break
 		}
 	}
 	if hostname != "" {
-		for i, metric := range res {
+		for i, _ := range res {
 			res[i].Labels["hostname"] = hostname
 		}
 	}

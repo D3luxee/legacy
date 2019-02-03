@@ -131,11 +131,10 @@ func (m *MetricSplit) Value() interface{} {
 
 // LookupID returns the LookupID hash for m
 func (m *MetricSplit) LookupID() string {
-	if m.AssetID == -1 && m.Labels["hostname"] != "" {
+	if m.IsMetrics20() {
 		//Lets use the new hostname based hash if available
-		a := m.Labels["hostname"]
 		h := sha256.New()
-		h.Write([]byte(a))
+		h.Write([]byte(m.Labels["hostname"]))
 		h.Write([]byte(m.Path))
 
 		return hex.EncodeToString(h.Sum(nil))
@@ -147,6 +146,14 @@ func (m *MetricSplit) LookupID() string {
 		h.Write([]byte(m.Path))
 
 		return hex.EncodeToString(h.Sum(nil))
+	}
+}
+
+func (m *MetricSplit) IsMetrics20() bool {
+	if m.AssetID == -1 && m.Labels["hostname"] != "" {
+		return true
+	} else {
+		return false
 	}
 }
 
