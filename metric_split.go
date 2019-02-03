@@ -131,12 +131,23 @@ func (m *MetricSplit) Value() interface{} {
 
 // LookupID returns the LookupID hash for m
 func (m *MetricSplit) LookupID() string {
-	a := strconv.FormatInt(m.AssetID, 10)
-	h := sha256.New()
-	h.Write([]byte(a))
-	h.Write([]byte(m.Path))
+	if m.AssetID == -1 && m.Labels["hostname"] != "" {
+		//Lets use the new hostname based hash if available
+		a := m.Labels["hostname"]
+		h := sha256.New()
+		h.Write([]byte(a))
+		h.Write([]byte(m.Path))
 
-	return hex.EncodeToString(h.Sum(nil))
+		return hex.EncodeToString(h.Sum(nil))
+	} else {
+		//The hostname is not available / its not explicity set to use the new format via AssetID == -1
+		a := strconv.FormatInt(m.AssetID, 10)
+		h := sha256.New()
+		h.Write([]byte(a))
+		h.Write([]byte(m.Path))
+
+		return hex.EncodeToString(h.Sum(nil))
+	}
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix
