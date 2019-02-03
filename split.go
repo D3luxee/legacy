@@ -104,6 +104,20 @@ func (m *MetricBatch) Split() []MetricSplit {
 		// wait for collector
 		cwg.Wait()
 	}
+	//Add hostname tag based of the hostname string metric
+	hostname := ""
+	for _, metric := range res {
+		if metric.Path == "/sys/hostname" {
+			hostname = metric.Value()
+			break
+		}
+	}
+	if hostname != "" {
+		for i, metric := range res {
+			res[i].Labels["hostname"] = hostname
+		}
+	}
+
 	return res
 }
 
