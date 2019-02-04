@@ -2,8 +2,10 @@ package legacy // import "github.com/solnx/legacy"
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
 
-	"github.com/raintank/schema"
+	"github.com/d3luxee/schema"
 )
 
 func (m *MetricSplit) ConvertToMetrics20() (schema.MetricData, error) {
@@ -15,7 +17,7 @@ func (m *MetricSplit) ConvertToMetrics20() (schema.MetricData, error) {
 		//Use public OrgID
 		metric.OrgId = 1
 		//Use the path as name
-		metric.Name = m.Path
+		metric.Name = strings.Replace(m.Path, "/", ".", -1)
 		//All values are float64 in metrics20
 		switch m.Type {
 		case `integer`:
@@ -35,8 +37,13 @@ func (m *MetricSplit) ConvertToMetrics20() (schema.MetricData, error) {
 		for k, v := range m.Tags {
 			// The old tags where an array to keep them we will convert them to key:value pairs
 			// using the index of the array as key
-			tag := string(k) + "=" + v
-			metric.Tags = append(metric.Tags, tag)
+			if !isUUID(v) {
+				tag := "what=" + v
+				metric.Tags = append(metric.Tags, tag)
+			} else {
+				tag := string(k) + "=" + v
+				metric.Tags = append(metric.Tags, tag)
+			}
 		}
 		for k, v := range m.Labels {
 			tag := k + "=" + v
@@ -46,4 +53,14 @@ func (m *MetricSplit) ConvertToMetrics20() (schema.MetricData, error) {
 		return metric, metric.Validate()
 	}
 	return schema.MetricData{}, fmt.Errorf("this metric is not intended to be a metrics20 metric")
+}
+
+// isUUID validates if a string is one very narrow formatting of a
+// UUID. Other valid formats with braces etc are not accepted.
+func isUUID(s string) bool {
+	const reUUID string = `^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[1-5][[:xdigit:]]{3}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$`
+	const reUNIL string = `^0{8}-0{4}-0{4}-0{4}-0{12}$`
+	re := regexp.MustCompile(fmt.Sprintf("%s|%s", reUUID, reUNIL))
+
+	return re.MatchString(s)
 }

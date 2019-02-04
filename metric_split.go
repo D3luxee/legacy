@@ -135,8 +135,7 @@ func (m *MetricSplit) LookupID() string {
 		//Lets use the new hostname based hash if available
 		h := sha256.New()
 		h.Write([]byte(m.Labels["hostname"]))
-		h.Write([]byte(m.Path))
-
+		h.Write([]byte(strings.Replace(m.Path, "/", ".", -1)))
 		return hex.EncodeToString(h.Sum(nil))
 	} else {
 		//The hostname is not available / its not explicity set to use the new format via AssetID == -1
